@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>烽火战线 V5 · 卡牌对战</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Microsoft YaHei','PingFang SC',sans-serif; user-select:none; }
+body { background:#1a1612; color:#e8dcc8; min-height:100vh; overflow:hidden; }
+#app { position:relative; width:100vw; height:100vh; }
+.hidden { display:none !important; }
+.btn { padding:10px 26px; background:linear-gradient(#8a3a2a,#6a2a1a); border:1px solid #c9a86a; border-radius:5px; color:#f0e0b8; font-weight:bold; cursor:pointer; font-size:15px; }
+.btn.sec { background:linear-gradient(#3a3a3a,#2a2a2a); border-color:#666; color:#ccc; }
+
+#home { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; background:radial-gradient(circle at 50% 40%, #2a2018 0%, #0f0c08 70%); }
+#home h1 { font-size:58px; letter-spacing:8px; color:#e8dcc8; text-shadow:0 0 30px rgba(200,60,40,.6); margin-bottom:4px; }
+#home .sub { color:#a89878; font-size:15px; letter-spacing:2px; margin-bottom:8px; }
+#home .ver { color:#5a4a3a; font-size:12px; margin-bottom:30px; }
+.home-actions { display:flex; gap:14px; flex-wrap:wrap; justify-content:center; }
+
+#deck-builder { position:absolute; inset:0; display:flex; flex-direction:column; background:#14110c; z-index:10; }
+#db-header { padding:12px 20px; background:#1e1812; border-bottom:1px solid #3a3020; display:flex; justify-content:space-between; align-items:center; }
+#db-header h2 { font-size:20px; color:#e8dcc8; }
+#db-header .deck-count { color:#c9a86a; font-weight:bold; }
+.rarity-legend { display:flex; gap:12px; font-size:11px; }
+.rarity-legend span { padding:2px 8px; border-radius:3px; }
+.r-R { background:#5a5a5a; color:#eee; }
+.r-SR { background:#2a5a8a; color:#cde; }
+.r-SSR { background:#5a2a8a; color:#dcf; }
+.r-UR { background:#8a6a1a; color:#ffe; }
+#db-main { flex:1; display:flex; overflow:hidden; }
+#db-pool { flex:1; padding:16px; overflow-y:auto; }
+.card-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(170px,1fr)); gap:12px; }
+.card-mini { background:linear-gradient(135deg,#2a2218,#1a140e); border:2px solid #4a3a28; border-radius:8px; padding:8px; cursor:pointer; position:relative; transition:.15s; }
+.card-mini:hover { transform:translateY(-3px); }
+.card-mini.R { border-color:#6a6a6a; }
+.card-mini.SR { border-color:#3a7aaa; }
+.card-mini.SSR { border-color:#8a4aca; }
+.card-mini.UR { border-color:#d4a42a; box-shadow:0 0 12px rgba(212,164,42,.3); }
+.card-mini.full { opacity:.4; cursor:not-allowed; }
+.card-mini .cm-art { width:100%; height:90px; border-radius:4px; overflow:hidden; background:#1a1410; margin-bottom:6px; position:relative; }
+.card-mini .cm-rarity { position:absolute; top:4px; left:4px; font-size:10px; font-weight:bold; padding:1px 6px; border-radius:3px; z-index:2; }
+.card-mini .cm-name { font-size:13px; font-weight:bold; color:#f0e0b8; }
+.card-mini .cm-stats { font-size:11px; color:#a89878; margin-top:2px; }
+.card-mini .cm-cost { position:absolute; top:8px; right:10px; width:22px; height:22px; background:#3a2a1a; border:1px solid #c9a86a; border-radius:50%; font-size:12px; color:#ffd24a; display:flex; align-items:center; justify-content:center; font-weight:bold; z-index:2; }
+.card-mini .cm-own { position:absolute; bottom:6px; right:10px; font-size:11px; color:#6a8a5a; font-weight:bold; }
+#db-side { width:340px; background:#1a1610; border-left:1px solid #3a3020; display:flex; flex-direction:column; }
+#db-side h3 { padding:12px 16px; color:#a89878; font-size:14px; border-bottom:1px solid #2a2018; }
+.rarity-counter { padding:8px 16px; font-size:12px; color:#888; border-bottom:1px solid #2a2018; display:flex; justify-content:space-between; }
+.rarity-counter span { color:#e8dcc8; }
+#deck-list { flex:1; overflow-y:auto; padding:10px 16px; }
+.deck-line { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #2a2018; font-size:13px; }
+.deck-line .dl-remove { color:#c05050; cursor:pointer; }
+#db-footer { padding:12px 16px; border-top:1px solid #2a2018; display:flex; gap:8px; flex-wrap:wrap; }
+#db-footer .btn { flex:1; min-width:80px; font-size:13px; padding:8px 10px; }
+
+#battle { position:absolute; inset:0; display:flex; flex-direction:column; background:#14110c; }
+#bt-top { height:50px; background:linear-gradient(#1e1812,#14110c); border-bottom:1px solid #3a3020; display:flex; justify-content:space-between; align-items:center; padding:0 20px; font-size:14px; }
+#bt-top .credits { color:#ffd24a; font-weight:bold; }
+#bt-field { flex:1; display:flex; flex-direction:column; justify-content:space-between; padding:10px 20px; position:relative; }
+#battle-canvas { position:absolute; inset:0; pointer-events:none; z-index:30; }
+.field-block { display:flex; align-items:center; gap:10px; justify-content:center; }
+.field-block .side-label { font-size:11px; color:#5a4a3a; width:40px; text-align:right; }
+.field-row { display:flex; justify-content:center; gap:10px; min-height:106px; align-items:center; }
+.field-slot { width:96px; height:96px; border:1px dashed #3a3020; border-radius:6px; position:relative; display:flex; align-items:center; justify-content:center; }
+.field-slot.occupied { border-style:solid; }
+.field-slot.move-target { border-color:#4ade80; background:rgba(74,222,128,.08); }
+#shared-front-wrap { border:1px solid #5a4a3a; border-radius:8px; padding:6px; background:rgba(60,50,30,.15); position:relative; }
+#shared-front-wrap::before { content:'前 线'; position:absolute; top:-9px; left:50%; transform:translateX(-50%); background:#14110c; padding:0 10px; font-size:11px; color:#c9a86a; }
+#front-owner-badge { position:absolute; top:-9px; right:10px; background:#14110c; padding:0 8px; font-size:10px; font-weight:bold; color:#5a4a3a; }
+#front-owner-badge.player { color:#4ade80; }
+#front-owner-badge.enemy { color:#ff6644; }
+
+.unit-card { width:92px; height:92px; background:linear-gradient(135deg,#2a2218,#1a140e); border:2px solid #4a3a28; border-radius:6px; display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; position:relative; overflow:hidden; }
+.unit-card.can-act { border-color:#c9a86a; box-shadow:0 0 12px rgba(200,60,40,.5); }
+.unit-card.enemy { border-color:#8a3a2a; }
+.unit-card.has-guard { border-color:#5a9aca; }
+.unit-card.ambush { border-color:#8a5aca; background:linear-gradient(135deg,#2a1a3a,#1a0e2a); }
+.unit-card.ambush .uc-name { color:#c090ff; }
+.unit-card.suppressed { opacity:.5; border-color:#888; }
+.unit-card.hq { width:120px; height:92px; border-width:3px; }
+.unit-card.hq.player-hq { border-color:#4ade80; }
+.unit-card.hq.enemy-hq { border-color:#ff6644; cursor:crosshair; }
+.unit-card.attacking { animation:atkPulse .3s ease-out; }
+.unit-card.hit { animation:hitShake .3s ease-out; }
+@keyframes atkPulse { 0%{transform:scale(1);} 50%{transform:scale(1.12);} 100%{transform:scale(1);} }
+@keyframes hitShake { 0%,100%{transform:translateX(0);} 25%{transform:translateX(-5px);} 75%{transform:translateX(5px);} }
+.unit-card .uc-art { position:absolute; top:0; left:0; width:100%; height:100%; opacity:.6; pointer-events:none; }
+.unit-card .uc-name { font-size:10px; font-weight:bold; color:#f0e0b8; text-align:center; line-height:1.2; padding:0 2px; z-index:1; }
+.unit-card .uc-stats { font-size:12px; color:#fff; margin-top:4px; display:flex; gap:8px; z-index:1; }
+.unit-card .uc-atk { color:#ff8866; font-weight:bold; }
+.unit-card .uc-hp { color:#88cc88; font-weight:bold; }
+.unit-card .uc-keyword { position:absolute; bottom:2px; right:4px; font-size:8px; color:#ffd24a; z-index:1; }
+.unit-card .uc-type { position:absolute; top:2px; left:4px; font-size:9px; color:#8a7a5a; z-index:1; }
+
+.float-text { position:absolute; pointer-events:none; font-weight:bold; font-size:16px; z-index:50; animation:floatUp 1s ease-out forwards; text-shadow:0 2px 4px rgba(0,0,0,.9); }
+@keyframes floatUp { 0%{opacity:1; transform:translateY(0);} 100%{opacity:0; transform:translateY(-40px);} }
+.float-text.plus { color:#4ade80; }
+.float-text.minus { color:#ff4444; }
+
+#bt-hand { height:160px; background:#1a1610; border-top:1px solid #3a3020; display:flex; justify-content:center; gap:8px; padding:12px; overflow-x:auto; }
+.hand-card { width:110px; height:136px; background:linear-gradient(160deg,#2e261a,#1a140e); border:2px solid #5a4a30; border-radius:8px; padding:0; cursor:pointer; position:relative; flex-shrink:0; overflow:hidden; }
+.hand-card.playable { border-color:#c9a86a; }
+.hand-card.selected { border-color:#4ade80; box-shadow:0 0 20px rgba(74,222,128,.6); transform:translateY(-8px); }
+.hand-card.R { border-color:#6a6a6a; }
+.hand-card.SR { border-color:#3a7aaa; }
+.hand-card.SSR { border-color:#8a4aca; }
+.hand-card.UR { border-color:#d4a42a; }
+.hand-card .hc-art { width:100%; height:64px; background:#1a1410; display:block; }
+.hand-card .hc-body { padding:4px 6px; }
+.hand-card .hc-cost { position:absolute; top:4px; left:4px; width:22px; height:22px; background:#3a2a1a; border:1px solid #c9a86a; border-radius:50%; font-size:13px; color:#ffd24a; display:flex; align-items:center; justify-content:center; font-weight:bold; z-index:2; }
+.hand-card .hc-name { font-size:11px; font-weight:bold; color:#f0e0b8; text-align:center; }
+.hand-card .hc-type { font-size:9px; color:#8a7a5a; text-align:center; }
+.hand-card .hc-stats { display:flex; justify-content:center; gap:10px; font-size:12px; font-weight:bold; margin-top:2px; }
+.hand-card .hc-desc { font-size:8px; color:#a89878; text-align:center; margin-top:2px; line-height:1.2; }
+
+#bt-bottom { height:44px; background:#14110c; border-top:1px solid #2a2018; display:flex; justify-content:space-between; align-items:center; padding:0 20px; }
+#bt-log { font-size:12px; color:#ffd24a; flex:1; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+#end-turn-btn { padding:7px 24px; background:linear-gradient(#8a3a2a,#6a2a1a); border:1px solid #c9a86a; border-radius:5px; color:#f0e0b8; font-weight:bold; cursor:pointer; font-size:13px; }
+
+#fx-layer { position:fixed; inset:0; pointer-events:none; z-index:200; overflow:hidden; }
+.fx-flash { position:absolute; inset:0; opacity:0; }
+.fx-flash.red { background:radial-gradient(circle, rgba(200,0,0,0) 30%, rgba(200,0,0,.55) 100%); animation:flashPulse .4s ease-out; }
+.fx-flash.white { background:rgba(255,255,255,.35); animation:flashPulse .25s ease-out; }
+.fx-flash.gold { background:radial-gradient(circle, rgba(255,210,74,.15) 0%, rgba(255,210,74,.45) 100%); animation:flashPulse .5s ease-out; }
+@keyframes flashPulse { 0%{opacity:0;} 25%{opacity:1;} 100%{opacity:0;} }
+.shake-light { animation:shakeLight .3s ease-out; }
+.shake-strong { animation:shakeStrong .4s ease-out; }
+@keyframes shakeLight { 0%,100%{transform:translate(0,0);} 20%{transform:translate(-3px,2px);} 40%{transform:translate(3px,-2px);} 60%{transform:translate(-2px,1px);} 80%{transform:translate(2px,-1px);} }
+@keyframes shakeStrong { 0%,100%{transform:translate(0,0);} 15%{transform:translate(-6px,4px);} 30%{transform:translate(6px,-4px);} 45%{transform:translate(-4px,3px);} 60%{transform:translate(4px,-3px);} 75%{transform:translate(-2px,1px);} }
+.fx-bigtext { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:72px; font-weight:bold; letter-spacing:8px; text-shadow:0 0 40px rgba(0,0,0,.9), 0 4px 12px rgba(0,0,0,.8); animation:bigTextIn 1.2s ease-out forwards; white-space:nowrap; }
+@keyframes bigTextIn { 0%{opacity:0; transform:translate(-50%,-50%) scale(1.6);} 20%{opacity:1; transform:translate(-50%,-50%) scale(1);} 75%{opacity:1; transform:translate(-50%,-50%) scale(1);} 100%{opacity:0; transform:translate(-50%,-50%) scale(.92);} }
+.fx-bigtext.player { color:#4ade80; }
+.fx-bigtext.enemy { color:#ff6644; }
+.death-particle { position:absolute; width:6px; height:6px; border-radius:50%; pointer-events:none; }
+.bomb-fall { position:absolute; width:10px; height:14px; background:linear-gradient(#333,#111); border-radius:2px; pointer-events:none; box-shadow:0 0 8px rgba(255,150,0,.6); }
+
+#end-fx { position:fixed; inset:0; z-index:210; display:none; align-items:center; justify-content:center; flex-direction:column; }
+#end-fx.show { display:flex; }
+#end-fx .ef-bg { position:absolute; inset:0; animation:endBg 1.6s ease-out forwards; }
+@keyframes endBg { 0%{opacity:0;} 30%{opacity:1;} 100%{opacity:1;} }
+#end-fx.win .ef-bg { background:radial-gradient(circle, rgba(40,80,40,.85) 0%, rgba(5,15,5,.97) 70%); }
+#end-fx.lose .ef-bg { background:radial-gradient(circle, rgba(80,20,20,.85) 0%, rgba(15,5,5,.97) 70%); }
+#end-fx .ef-title { position:relative; z-index:2; font-size:88px; font-weight:bold; letter-spacing:12px; animation:endTitleIn 1.2s ease-out; }
+#end-fx.win .ef-title { color:#4ade80; text-shadow:0 0 60px rgba(74,222,128,.7); }
+#end-fx.lose .ef-title { color:#ff4444; text-shadow:0 0 60px rgba(255,68,68,.7); }
+@keyframes endTitleIn { 0%{opacity:0; transform:scale(2.2);} 40%{opacity:1; transform:scale(1);} 100%{opacity:1; transform:scale(1);} }
+
+#result-screen { position:absolute; inset:0; z-index:50; background:rgba(10,8,5,.95); display:flex; flex-direction:column; align-items:center; justify-content:center; }
+#result-screen h1 { font-size:52px; margin-bottom:16px; }
+#result-screen .rs-sub { font-size:18px; color:#a89878; margin-bottom:30px; }
+
+#action-menu { position:absolute; z-index:40; background:#1e1e1e; border:1px solid #6a5a3a; border-radius:6px; display:none; min-width:160px; box-shadow:0 4px 20px rgba(0,0,0,.8); }
+#action-menu.show { display:block; }
+.am-item { padding:9px 14px; font-size:13px; color:#ddd; cursor:pointer; display:flex; align-items:center; gap:8px; border-bottom:1px solid #2a2a2a; }
+.am-item:last-child { border-bottom:none; }
+.am-item:hover { background:#3a3a2a; }
+.am-item.disabled { opacity:.4; cursor:not-allowed; }
+
+#toast { position:fixed; top:20px; left:50%; transform:translateX(-50%); background:rgba(40,30,20,.95); border:1px solid #c9a86a; border-radius:5px; padding:10px 24px; color:#f0e0b8; font-size:14px; opacity:0; transition:.3s; pointer-events:none; z-index:100; }
+#toast.show { opacity:1; }
+
+#code-modal { position:fixed; inset:0; z-index:120; background:rgba(0,0,0,.75); display:none; align-items:center; justify-content:center; }
+#code-modal.show { display:flex; }
+#code-box { background:#1e1a12; border:2px solid #c9a86a; border-radius:10px; padding:24px; width:min(480px,92vw); }
+#code-box h3 { color:#ffd24a; margin-bottom:12px; }
+#code-box textarea { width:100%; height:100px; background:#14110c; border:1px solid #4a3a28; border-radius:4px; color:#e8dcc8; padding:8px; font-family:monospace; font-size:12px; resize:vertical; }
+#code-box .cb-btns { display:flex; gap:8px; margin-top:12px; }
+
+#info-modal { position:fixed; inset:0; z-index:130; background:rgba(0,0,0,.78); display:none; align-items:center; justify-content:center; }
+#info-modal.show { display:flex; }
+#info-box { background:#1e1a12; border:2px solid #c9a86a; border-radius:10px; padding:22px; width:min(440px,92vw); }
+#info-box h3 { color:#ffd24a; margin-bottom:4px; font-size:20px; }
+#info-box .ib-rarity { font-size:12px; margin-bottom:12px; }
+#info-box .ib-art { width:100%; height:140px; background:#14110c; border-radius:6px; margin-bottom:12px; overflow:hidden; }
+#info-box .ib-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #2a2018; font-size:14px; }
+#info-box .ib-row:last-child { border-bottom:none; }
+#info-box .ib-row .k { color:#a89878; }
+#info-box .ib-row .v { color:#e8dcc8; font-weight:bold; }
+#info-box .ib-desc { margin-top:12px; font-size:13px; color:#c8b898; line-height:1.6; }
+#info-box .ib-close { width:100%; margin-top:14px; padding:10px; background:#444; border:none; border-radius:5px; color:#fff; font-weight:bold; cursor:pointer; }
+
+#credit-modal { position:fixed; inset:0; z-index:130; background:rgba(0,0,0,.78); display:none; align-items:center; justify-content:center; }
+#credit-modal.show { display:flex; }
+#credit-box { background:#1e1a12; border:2px solid #c9a86a; border-radius:10px; padding:30px; width:min(420px,92vw); text-align:center; }
+#credit-box h3 { color:#ffd24a; font-size:22px; margin-bottom:20px; }
+#credit-box .cr-section { margin-bottom:16px; }
+#credit-box .cr-label { color:#a89878; font-size:12px; margin-bottom:4px; }
+#credit-box .cr-name { color:#e8dcc8; font-size:16px; font-weight:bold; }
+#credit-box .cr-desc { color:#888; font-size:12px; margin-top:2px; }
+#credit-box .cr-close { width:100%; margin-top:16px; padding:10px; background:#444; border:none; border-radius:5px; color:#fff; font-weight:bold; cursor:pointer; }
+</style>
+</head>
+<body>
+<div id="app">
+    <div id="fx-layer"></div>
+
+    <div id="home">
+        <h1>烽火战线</h1>
+        <div class="sub">中国卡组 · 对抗 · 日本卡组</div>
+        <div class="ver">V5 正式版</div>
+        <div class="home-actions">
+            <button class="btn" id="btn-battle">开始对战</button>
+            <button class="btn sec" id="btn-deck">编辑卡组</button>
+            <button class="btn sec" id="btn-credit">鸣谢人员</button>
+        </div>
+    </div>
+
+    <div id="deck-builder" class="hidden">
+        <div id="db-header">
+            <h2>卡组编辑 · 中国</h2>
+            <div class="rarity-legend">
+                <span class="r-R">R 4</span>
+                <span class="r-SR">SR 3</span>
+                <span class="r-SSR">SSR 2</span>
+                <span class="r-UR">UR 1</span>
+            </div>
+            <div>卡组：<span class="deck-count" id="deck-count">0</span> / 24</div>
+        </div>
+        <div id="db-main">
+            <div id="db-pool"><div class="card-grid" id="pool-grid"></div></div>
+            <div id="db-side">
+                <h3>当前卡组</h3>
+                <div class="rarity-counter">R <span id="cnt-R">0/12</span> · SR <span id="cnt-SR">0/6</span> · SSR <span id="cnt-SSR">0/4</span> · UR <span id="cnt-UR">0/2</span></div>
+                <div id="deck-list"></div>
+                <div id="db-footer">
+                    <button class="btn sec" id="db-back">返回</button>
+                    <button class="btn sec" id="db-code">卡组码</button>
+                    <button class="btn" id="db-clear">清空</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="battle" class="hidden">
+        <div id="bt-top">
+            <div>日本 · 指挥点 <span class="credits" id="enemy-credits">0</span> · 手牌 <span id="enemy-hand-count">0</span></div>
+            <div>指挥点 <span class="credits" id="player-credits">0</span> · 中国</div>
+        </div>
+        <div id="bt-field">
+            <canvas id="battle-canvas"></canvas>
+            <div class="field-block">
+                <div class="side-label">敌支援</div>
+                <div class="field-row" id="enemy-support"></div>
+                <div id="enemy-hq-slot"></div>
+            </div>
+            <div id="shared-front-wrap">
+                <div id="front-owner-badge">无主</div>
+                <div class="field-row" id="shared-front"></div>
+            </div>
+            <div class="field-block">
+                <div class="side-label">我支援</div>
+                <div class="field-row" id="player-support"></div>
+                <div id="player-hq-slot"></div>
+            </div>
+        </div>
+        <div id="bt-hand"></div>
+        <div id="bt-bottom">
+            <div id="bt-log">战斗开始</div>
+            <button id="end-turn-btn">结束回合</button>
+        </div>
+    </div>
+
+    <div id="action-menu"></div>
+
+    <div id="end-fx">
+        <div class="ef-bg"></div>
+        <div class="ef-title"></div>
+    </div>
+
+    <div id="result-screen" class="hidden">
+        <h1 id="result-title"></h1>
+        <div class="rs-sub" id="result-sub"></div>
+        <button class="btn" id="result-back">返回主页</button>
+    </div>
+
+    <div id="code-modal">
+        <div id="code-box">
+            <h3>卡组码</h3>
+            <textarea id="code-text" placeholder="粘贴或复制卡组码"></textarea>
+            <div class="cb-btns">
+                <button class="btn" id="code-export">导出</button>
+                <button class="btn sec" id="code-import">导入</button>
+                <button class="btn sec" id="code-close">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="info-modal">
+        <div id="info-box">
+            <h3 id="ib-title"></h3>
+            <div class="ib-rarity" id="ib-rarity"></div>
+            <div class="ib-art" id="ib-art"></div>
+            <div id="ib-rows"></div>
+            <div class="ib-desc" id="ib-desc"></div>
+            <button class="ib-close" id="info-close">关闭</button>
+        </div>
+    </div>
+
+    <div id="credit-modal">
+        <div id="credit-box">
+            <h3>鸣谢人员</h3>
+            <div class="cr-section">
+                <div class="cr-label">作者</div>
+                <div class="cr-name">guo20140901</div>
+            </div>
+            <div class="cr-section">
+                <div class="cr-label">反馈鸣谢</div>
+                <div class="cr-name">伶秋</div>
+                <div class="cr-desc">提出“选牌时看不到卡牌效果”的反馈</div>
+            </div>
+            <button class="cr-close" id="credit-close">关闭</button>
+        </div>
+    </div>
+
+    <div id="toast"></div>
+</div>
+
+<script>
+/* =========================================================
+   烽火战线 V5
+   移动/攻击消耗指挥点 · 炮兵不受反击 · 埋伏先手
+   P-40 替换歼-10 · 反制修复 · 压制/补给/反击词条
+   ========================================================= */
+
+const RARITY = {
+  R:   { color:'#6a6a6a', maxCopy:4, maxDeck:12 },
+  SR:  { color:'#3a7aaa', maxCopy:3, maxDeck:6 },
+  SSR: { color:'#8a4aca', maxCopy:2, maxDeck:4 },
+  UR:  { color:'#d4a42a', maxCopy:1, maxDeck:2 }
+};
+
+const CHINA_CARDS = [
+    { id:'cn_militia', name:'民兵', cost:0, atk:1, hp:1, type:'infantry', desc:'', kw:[], art:'militia', rarity:'R' },
+    { id:'cn_rifle', name:'中正式步枪兵', cost:2, atk:3, hp:3, type:'infantry', desc:'', kw:[], art:'rifle', rarity:'R' },
+    { id:'cn_guerrilla', name:'敌后武工队', cost:2, atk:2, hp:3, type:'infantry', desc:'突袭', kw:['rush'], art:'guerrilla', rarity:'R' },
+    { id:'cn_blade', name:'大刀敢死队', cost:3, atk:4, hp:2, type:'infantry', desc:'压制：被攻击的敌方单位下回合无法行动', kw:['suppress'], art:'blade', rarity:'SR' },
+    { id:'cn_german', name:'德械师', cost:5, atk:5, hp:5, type:'infantry', desc:'守护', kw:['guard'], art:'german', rarity:'SSR' },
+    { id:'cn_saboteur', name:'敌后游击队', cost:3, atk:2, hp:2, type:'infantry', desc:'', kw:[], art:'saboteur', rarity:'SR' },
+    { id:'cn_t62', name:'62式轻坦克', cost:3, atk:3, hp:3, type:'tank', desc:'闪击', kw:['blitz'], art:'t62', rarity:'SR' },
+    { id:'cn_t59', name:'59式坦克', cost:5, atk:5, hp:5, type:'tank', desc:'守护', kw:['guard'], art:'t59', rarity:'SSR' },
+    { id:'cn_howitzer', name:'54式榴弹炮', cost:4, atk:3, hp:4, type:'artillery', desc:'炮兵攻击不受反击', kw:[], art:'howitzer', rarity:'SR' },
+    { id:'cn_p40', name:'P-40 战鹰', cost:6, atk:6, hp:5, type:'fighter', desc:'冲击', kw:['impact'], art:'p40', rarity:'UR' },
+    { id:'cn_masses', name:'革命群众', cost:2, atk:0, hp:0, type:'order', desc:'2张民兵入手', kw:[], art:'masses', rarity:'SSR' },
+    { id:'cn_attrition', name:'持久战', cost:4, atk:0, hp:0, type:'order', desc:'抽2张，回3血', kw:[], art:'attrition', rarity:'UR' },
+    { id:'cn_bomb', name:'空中支援', cost:5, atk:0, hp:0, type:'bomb', desc:'轰炸：敌方单位3伤害', kw:[], art:'bomb', rarity:'SR' },
+    { id:'cn_ambush', name:'设伏', cost:2, atk:3, hp:2, type:'infantry', desc:'埋伏：被攻击时先手2伤害', kw:['ambush'], art:'ambush', rarity:'R' },
+    { id:'cn_mine', name:'反坦克地雷', cost:2, atk:0, hp:0, type:'trap', desc:'敌方移动时触发，4伤害', kw:[], art:'mine', rarity:'R' },
+    { id:'cn_tunnel', name:'地道战民兵', cost:1, atk:1, hp:2, type:'infantry', desc:'补给：部署时+1指挥点', kw:['supply'], art:'tunnel', rarity:'R' },
+    { id:'cn_pingxing', name:'平型关伏击', cost:3, atk:0, hp:0, type:'order', desc:'敌方前线全体2伤害', kw:[], art:'pingxing', rarity:'SR' },
+    { id:'cn_hundred', name:'百团大战', cost:6, atk:0, hp:0, type:'order', desc:'全体友军+2攻，抽1张', kw:[], art:'hundred', rarity:'SSR' },
+    { id:'cn_wolf', name:'狼牙山五壮士', cost:5, atk:5, hp:5, type:'infantry', desc:'守护；反击：被攻击时额外反击', kw:['guard','counter'], art:'wolf', rarity:'SSR' },
+    { id:'cn_protracted', name:'论持久战', cost:7, atk:0, hp:0, type:'order', desc:'总部回8血，全体友军+1/+1', kw:[], art:'protracted', rarity:'UR' },
+    /* 加指挥点 */
+    { id:'cn_arsenal', name:'兵工厂增产', cost:0, atk:0, hp:0, type:'order', desc:'本回合获得2指挥点', kw:[], art:'arsenal', rarity:'SR' },
+    { id:'cn_mobilize', name:'战时动员', cost:3, atk:0, hp:0, type:'order', desc:'本回合获得6指挥点', kw:[], art:'mobilize', rarity:'SSR' }
+];
+
+const JAPAN_CARDS = [
+    { id:'jp_shibata', name:'新发田联队', cost:1, atk:2, hp:1, type:'infantry', desc:'闪击', kw:['blitz'], art:'shibata', rarity:'R' },
+    { id:'jp_tankette', name:'九四式轻装甲车', cost:1, atk:1, hp:2, type:'tank', desc:'闪击', kw:['blitz'], art:'tankette', rarity:'R' },
+    { id:'jp_238', name:'步兵第238联队', cost:2, atk:2, hp:2, type:'infantry', desc:'', kw:[], art:'inf238', rarity:'R' },
+    { id:'jp_search10', name:'搜索第10联队', cost:2, atk:1, hp:3, type:'infantry', desc:'补给：部署时+1指挥点', kw:['supply'], art:'search10', rarity:'R' },
+    { id:'jp_2nd', name:'第二挺进团', cost:3, atk:3, hp:2, type:'infantry', desc:'闪击', kw:['blitz'], art:'2nd', rarity:'SR' },
+    { id:'jp_utsunomiya', name:'宇都宫联队', cost:5, atk:4, hp:4, type:'infantry', desc:'奋战；压制', kw:['fury','suppress'], art:'utsunomiya', rarity:'SSR' },
+    { id:'jp_ki30', name:'Ki-30', cost:3, atk:2, hp:2, type:'bomber', desc:'', kw:[], art:'ki30', rarity:'SR' },
+    { id:'jp_ki61', name:'Ki-61', cost:4, atk:4, hp:3, type:'fighter', desc:'', kw:[], art:'ki61', rarity:'SR' },
+    { id:'jp_banzai', name:'万岁冲锋', cost:3, atk:0, hp:0, type:'order', desc:'', kw:[], art:'banzai', rarity:'UR' },
+    { id:'jp_empire', name:'帝国研发', cost:3, atk:0, hp:0, type:'order', desc:'', kw:[], art:'empire', rarity:'UR' },
+    { id:'jp_crush', name:'摧枯拉朽', cost:2, atk:0, hp:0, type:'order', desc:'', kw:[], art:'crush', rarity:'SR' },
+    { id:'jp_death', name:'至死方休', cost:6, atk:0, hp:0, type:'order', desc:'', kw:[], art:'death', rarity:'SSR' },
+    { id:'jp_bomb', name:'空袭', cost:4, atk:0, hp:0, type:'bomb', desc:'敌方单位2伤害', kw:[], art:'airraid', rarity:'SR' },
+    { id:'jp_ambush', name:'伏兵', cost:2, atk:2, hp:2, type:'infantry', desc:'埋伏：被攻击时先手2伤害', kw:['ambush'], art:'ambush2', rarity:'R' },
+    { id:'jp_kwantung', name:'关东军步兵', cost:1, atk:2, hp:1, type:'infantry', desc:'', kw:[], art:'kwantung', rarity:'R' },
+    { id:'jp_type97', name:'九七式坦克', cost:4, atk:4, hp:3, type:'tank', desc:'闪击', kw:['blitz'], art:'type97', rarity:'SR' },
+    { id:'jp_zero', name:'零式战斗机', cost:4, atk:4, hp:3, type:'fighter', desc:'冲击', kw:['impact'], art:'zero', rarity:'SR' },
+    { id:'jp_itagaki', name:'板垣师团', cost:6, atk:6, hp:5, type:'infantry', desc:'奋战；反击', kw:['fury','counter'], art:'itagaki', rarity:'SSR' },
+    { id:'jp_daihonei', name:'大本营令', cost:7, atk:0, hp:0, type:'order', desc:'全体友军+2攻，回合结束消灭', kw:[], art:'daihonei', rarity:'UR' },
+    /* 加指挥点 */
+    { id:'jp_produce', name:'战时增产', cost:0, atk:0, hp:0, type:'order', desc:'本回合获得2指挥点', kw:[], art:'jp_produce', rarity:'SR' },
+    { id:'jp_mobilize', name:'大本营动员', cost:3, atk:0, hp:0, type:'order', desc:'本回合获得6指挥点', kw:[], art:'jp_mobilize', rarity:'SSR' }
+];
+
+const TYPE_NAMES = { infantry:'步兵', tank:'坦克', artillery:'炮兵', fighter:'战斗机', bomber:'轰炸机', order:'指令', bomb:'轰炸', trap:'反制' };
+const KW_NAMES = { blitz:'闪击', guard:'守护', rush:'突袭', fury:'奋战', impact:'冲击', ambush:'埋伏', deathrattle:'亡语', suppress:'压制', supply:'补给', counter:'反击' };
+const KW_DESC = {
+  blitz:'部署当回合即可行动',
+  guard:'敌方有守护单位时，必须先攻击守护',
+  rush:'部署当回合可攻击',
+  fury:'每回合可攻击两次',
+  impact:'攻击时不受反击',
+  ambush:'背面部署，被攻击时先手造成2伤害',
+  deathrattle:'单位阵亡时触发效果',
+  suppress:'被此单位攻击的敌方单位下回合无法行动',
+  supply:'部署时己方指挥点+1',
+  counter:'被攻击时，对攻击方额外造成一次反击伤害'
+};
+
+const ART_CACHE = {};
+function artCanvas(id, w, h){
+  const key = id + '_' + w + 'x' + h;
+  if(ART_CACHE[key]) return ART_CACHE[key];
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const x = c.getContext('2d');
+  drawArt(id, x, w, h);
+  ART_CACHE[key] = c;
+  return c;
+}
+
+function drawArt(id, ctx, W, H){
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0, '#2a2418'); bg.addColorStop(1, '#14100a');
+  ctx.fillStyle = bg; ctx.fillRect(0,0,W,H);
+  ctx.save();
+  ctx.translate(W/2, H/2);
+  switch(id){
+    case 'militia':
+      ctx.fillStyle='#8a7a5a'; ctx.beginPath(); ctx.arc(0,-H*0.15,H*0.12,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#6a5a3a'; ctx.beginPath(); ctx.moveTo(-H*0.1,-H*0.05); ctx.lineTo(H*0.1,-H*0.05); ctx.lineTo(H*0.15,H*0.25); ctx.lineTo(-H*0.15,H*0.25); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#a88a5a'; ctx.beginPath(); ctx.ellipse(0,-H*0.22,H*0.18,H*0.06,0,0,Math.PI*2); ctx.fill();
+      break;
+    case 'rifle':
+      ctx.fillStyle='#5a7a4a'; ctx.beginPath(); ctx.arc(0,-H*0.12,H*0.13,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#4a6a3a'; ctx.beginPath(); ctx.ellipse(0,-H*0.18,H*0.16,H*0.05,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#6a5a3a'; ctx.fillRect(-H*0.12,-H*0.02,H*0.24,H*0.3);
+      ctx.strokeStyle='#2a1a0a'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(H*0.05,-H*0.05); ctx.lineTo(H*0.35,-H*0.28); ctx.stroke();
+      ctx.fillStyle='#c03030'; ctx.beginPath(); ctx.arc(0,-H*0.14,H*0.04,0,Math.PI*2); ctx.fill();
+      break;
+    case 'guerrilla':
+      ctx.fillStyle='#3a3a4a'; ctx.beginPath(); ctx.arc(-H*0.05,-H*0.12,H*0.11,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#2a2a3a'; ctx.fillRect(-H*0.18,-H*0.02,H*0.26,H*0.3);
+      ctx.strokeStyle='#6a6a7a'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(-H*0.05,-H*0.05); ctx.lineTo(H*0.2,-H*0.15); ctx.stroke();
+      break;
+    case 'blade':
+      ctx.fillStyle='#4a5a5a'; ctx.beginPath(); ctx.arc(0,-H*0.12,H*0.12,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#3a4a4a'; ctx.fillRect(-H*0.13,-H*0.02,H*0.26,H*0.32);
+      ctx.strokeStyle='#cccccc'; ctx.lineWidth=4; ctx.beginPath(); ctx.moveTo(-H*0.25,-H*0.1); ctx.lineTo(H*0.25,-H*0.32); ctx.stroke();
+      break;
+    case 'german':
+      ctx.fillStyle='#3a5a3a'; ctx.beginPath(); ctx.arc(0,-H*0.12,H*0.13,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#2a4a2a'; ctx.beginPath(); ctx.ellipse(0,-H*0.18,H*0.16,H*0.06,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#2a4a2a'; ctx.fillRect(-H*0.16,-H*0.02,H*0.32,H*0.32);
+      break;
+    case 'saboteur':
+      ctx.fillStyle='#4a4a3a'; ctx.beginPath(); ctx.arc(0,-H*0.12,H*0.11,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#3a3a2a'; ctx.fillRect(-H*0.14,-H*0.02,H*0.28,H*0.3);
+      ctx.fillStyle='#8a3a2a'; ctx.beginPath(); ctx.arc(0,H*0.05,H*0.08,0,Math.PI*2); ctx.fill();
+      break;
+    case 't62':
+      ctx.fillStyle='#5a7a4a'; ctx.fillRect(-H*0.3,-H*0.05,H*0.6,H*0.18);
+      ctx.fillStyle='#3a3a2a'; ctx.fillRect(-H*0.32,H*0.1,H*0.64,H*0.06);
+      ctx.fillStyle='#4a6a3a'; ctx.beginPath(); ctx.arc(0,-H*0.08,H*0.15,0,Math.PI*2); ctx.fill();
+      break;
+    case 't59':
+      ctx.fillStyle='#3a5a3a'; ctx.fillRect(-H*0.32,-H*0.06,H*0.64,H*0.2);
+      ctx.fillStyle='#2a2a1a'; ctx.fillRect(-H*0.34,H*0.12,H*0.68,H*0.08);
+      ctx.fillStyle='#4a6a4a'; ctx.beginPath(); ctx.ellipse(0,-H*0.08,H*0.18,H*0.12,0,0,Math.PI*2); ctx.fill();
+      break;
+    case 'howitzer':
+      ctx.fillStyle='#7a6a3a'; ctx.beginPath(); ctx.arc(0,H*0.2,H*0.1,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#4a4a3a'; ctx.lineWidth=6; ctx.beginPath(); ctx.moveTo(0,H*0.2); ctx.lineTo(H*0.15,-H*0.35); ctx.stroke();
+      break;
+    case 'p40':
+      ctx.fillStyle='#8a9a6a'; ctx.beginPath(); ctx.moveTo(0,-H*0.22); ctx.lineTo(H*0.13,0); ctx.lineTo(H*0.05,H*0.15); ctx.lineTo(-H*0.05,H*0.15); ctx.lineTo(-H*0.13,0); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#6a7a4a'; ctx.beginPath(); ctx.moveTo(-H*0.13,0); ctx.lineTo(-H*0.32,H*0.05); ctx.lineTo(-H*0.13,H*0.1); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(H*0.13,0); ctx.lineTo(H*0.32,H*0.05); ctx.lineTo(H*0.13,H*0.1); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#c03030'; ctx.beginPath(); ctx.arc(0,-H*0.08,H*0.05,0,Math.PI*2); ctx.fill();
+      break;
+    case 'masses':
+      ctx.fillStyle='#c03030'; ctx.fillRect(-H*0.02,-H*0.3,H*0.04,H*0.5);
+      ctx.fillStyle='#c03030'; ctx.beginPath(); ctx.moveTo(H*0.02,-H*0.3); ctx.lineTo(H*0.25,-H*0.25); ctx.lineTo(H*0.02,-H*0.18); ctx.closePath(); ctx.fill();
+      break;
+    case 'attrition':
+      ctx.fillStyle='#8a7a5a'; ctx.fillRect(-H*0.3,-H*0.2,H*0.6,H*0.4);
+      ctx.strokeStyle='#c03030'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.moveTo(-H*0.2,-H*0.1); ctx.lineTo(-H*0.05,H*0.05); ctx.lineTo(H*0.1,-H*0.05); ctx.lineTo(H*0.2,H*0.1); ctx.stroke();
+      break;
+    case 'bomb':
+      ctx.fillStyle='#5a6a7a'; ctx.beginPath(); ctx.moveTo(-H*0.3,0); ctx.lineTo(H*0.3,0); ctx.lineTo(H*0.15,-H*0.1); ctx.lineTo(-H*0.15,-H*0.1); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#ff8822'; ctx.beginPath(); ctx.arc(0,H*0.2,H*0.06,0,Math.PI*2); ctx.fill();
+      break;
+    case 'ambush':
+      ctx.fillStyle='#3a3a2a'; ctx.fillRect(-H*0.3,H*0.1,H*0.6,H*0.15);
+      ctx.fillStyle='#4a6a3a'; ctx.beginPath(); ctx.arc(0,-H*0.05,H*0.1,0,Math.PI*2); ctx.fill();
+      break;
+    case 'mine':
+      ctx.fillStyle='#3a3a2a'; ctx.beginPath(); ctx.arc(0,0,H*0.18,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#aa2222'; ctx.beginPath(); ctx.arc(0,0,H*0.05,0,Math.PI*2); ctx.fill();
+      break;
+    case 'tunnel':
+      ctx.fillStyle='#4a3a2a'; ctx.beginPath(); ctx.arc(0,H*0.1,H*0.3,Math.PI,0); ctx.fill();
+      ctx.fillStyle='#5a6a3a'; ctx.beginPath(); ctx.arc(0,-H*0.1,H*0.1,0,Math.PI*2); ctx.fill();
+      break;
+    case 'pingxing':
+      ctx.fillStyle='#8a3a2a'; ctx.beginPath(); ctx.arc(0,0,H*0.15,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#ffaa44'; ctx.beginPath(); ctx.arc(0,0,H*0.08,0,Math.PI*2); ctx.fill();
+      break;
+    case 'hundred':
+      ctx.fillStyle='#c03030'; ctx.fillRect(-H*0.02,-H*0.3,H*0.04,H*0.5);
+      ctx.fillStyle='#c03030'; ctx.beginPath(); ctx.moveTo(H*0.02,-H*0.3); ctx.lineTo(H*0.3,-H*0.25); ctx.lineTo(H*0.02,-H*0.15); ctx.closePath(); ctx.fill();
+      break;
+    case 'wolf':
+      ctx.fillStyle='#5a6a3a'; ctx.beginPath(); ctx.arc(0,-H*0.12,H*0.13,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#4a5a2a'; ctx.fillRect(-H*0.15,-H*0.02,H*0.3,H*0.3);
+      break;
+    case 'protracted':
+      ctx.fillStyle='#8a7a5a'; ctx.fillRect(-H*0.3,-H*0.2,H*0.6,H*0.4);
+      ctx.strokeStyle='#c03030'; ctx.lineWidth=3;
+      ctx.beginPath(); ctx.moveTo(-H*0.2,H*0.1); ctx.lineTo(0,0); ctx.lineTo(H*0.2,H*0.05); ctx.stroke();
+      break;
+    case 'arsenal':
+      ctx.fillStyle='#6a6a6a'; ctx.fillRect(-H*0.2,-H*0.15,H*0.4,H*0.3);
+      ctx.fillStyle='#ffd24a'; ctx.font='bold '+H*0.2+'px sans-serif'; ctx.textAlign='center'; ctx.fillText('+2',0,H*0.08);
+      break;
+    case 'mobilize':
+      ctx.fillStyle='#8a6a3a'; ctx.fillRect(-H*0.25,-H*0.2,H*0.5,H*0.4);
+      ctx.fillStyle='#ffd24a'; ctx.font='bold '+H*0.24+'px sans-serif'; ctx.textAlign='center'; ctx.fillText('+6',0,H*0.1);
+      break;
+    case 'jp_produce':
+      ctx.fillStyle='#6a6a5a'; ctx.fillRect(-H*0.2,-H*0.15,H*0.4,H*0.3);
+      ctx.fillStyle='#ffd24a'; ctx.font='bold '+H*0.2+'px sans-serif'; ctx.textAlign='center'; ctx.fillText('+2',0,H*0.08);
+      break;
+    case 'jp_mobilize':
+      ctx.fillStyle='#8a3a2a'; ctx.fillRect(-H*0.25,-H*0.2,H*0.5,H*0.4);
+      ctx.fillStyle='#ffd24a'; ctx.font='bold '+H*0.24+'px sans-serif'; ctx.textAlign='center'; ctx.fillText('+6',0,H*0.1);
+      break;
+    case 'kwantung':
+      ctx.fillStyle='#8a7a5a'; ctx.beginPath(); ctx.arc(0,-H*0.12,H*0.12,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#7a6a4a'; ctx.fillRect(-H*0.13,-H*0.02,H*0.26,H*0.3);
+      ctx.strokeStyle='#2a1a0a'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(H*0.05,-H*0.05); ctx.lineTo(H*0.35,-H*0.3); ctx.stroke();
+      break;
+    case 'type97':
+      ctx.fillStyle='#5a6a4a'; ctx.fillRect(-H*0.3,-H*0.06,H*0.6,H*0.2);
+      ctx.fillStyle='#3a3a2a'; ctx.fillRect(-H*0.32,H*0.12,H*0.64,H*0.07);
+      ctx.fillStyle='#4a5a3a'; ctx.beginPath(); ctx.arc(0,-H*0.1,H*0.15,0,Math.PI*2); ctx.fill();
+      break;
+    case 'zero':
+      ctx.fillStyle='#a8b8c8'; ctx.beginPath(); ctx.moveTo(0,-H*0.24); ctx.lineTo(H*0.13,0); ctx.lineTo(H*0.05,H*0.14); ctx.lineTo(-H*0.05,H*0.14); ctx.lineTo(-H*0.13,0); ctx.closePath(); ctx.fill();
+      ctx.fillStyle='#8a9aac'; ctx.beginPath(); ctx.moveTo(-H*0.13,0); ctx.lineTo(-H*0.32,H*0.05); ctx.lineTo(-H*0.13,H*0.1); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(H*0.13,0); ctx.lineTo(H*0.32,H*0.05); ctx.lineTo(H*0.13,H*0.1); ctx.closePath(); ctx.fill();
+      break;
+    case 'itagaki':
+      ctx.fillStyle='#4a5a6a'; ctx.beginPath(); ctx.arc(0,-H*0.12,H*0.14,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#3a4a5a'; ctx.fillRect(-H*0.16,-H*0.02,H*0.32,H*0.32);
+      break;
+    case 'daihonei':
+      ctx.fillStyle='#8a1a1a'; ctx.beginPath(); ctx.arc(0,-H*0.05,H*0.28,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#ffd24a'; ctx.beginPath(); ctx.arc(0,-H*0.05,H*0.12,0,Math.PI*2); ctx.fill();
+      break;
+    case 'shibata':
+      ctx.fillStyle='#8a7a4a'; ctx.beginPath(); ctx.arc(0,-H*0.12,H*0.12,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#6a5a2a'; ctx.fillRect(-H*0.12,-H*0.02,H*0.24,H*0.3);
+      ctx.strokeStyle='#2a1a0a'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(H*0.05,-H*0.05); ctx.lineTo(H*0.35,-H*0.3); ctx.stroke();
+      break;
+    case 'tankette':
+      ctx.fillStyle='#5a6a4a'; ctx.fillRect(-H*0.25,0,H*0.5,H*0.15);
+      ctx.fillStyle='#3a3a2a'; ctx.fillRect(-H*0.27,H*0.15,H*0.54,H*0.06);
+      break;
+    case 'inf238':
+      ctx.fillStyle='#8a7a5a'; ctx.beginPath(); ctx.arc(0,-H*0.12,H*0.12,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#7a6a4a'; ctx.fillRect(-H*0.13,-H*0.02,H*0.26,H*0.3);
+      break;
+    case 'search10':
+      ctx.fillStyle='#8a8a5a'; ctx.beginPath(); ctx.arc(0,-H*0.12,H*0.12,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#7a7a4a'; ctx.fillRect(-H*0.13,-H*0.02,H*0.26,H*0.3);
+      break;
+    case '2nd':
+      ctx.fillStyle='#7a6a4a'; ctx.beginPath(); ctx.arc(-H*0.05,-H*0.12,H*0.12,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#6a5a3a'; ctx.fillRect(-H*0.18,-H*0.02,H*0.26,H*0.3);
+      break;
+    case 'utsunomiya':
+      ctx.fillStyle='#4a5a6a'; ctx.beginPath(); ctx.arc(0,-H*0.12,H*0.13,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#3a4a5a'; ctx.fillRect(-H*0.15,-H*0.02,H*0.3,H*0.32);
+      break;
+    case 'ki30':
+      ctx.fillStyle='#6a7a5a'; ctx.beginPath(); ctx.moveTo(0,-H*0.2); ctx.lineTo(H*0.1,0); ctx.lineTo(-H*0.1,0); ctx.closePath(); ctx.fill();
+      break;
+    case 'ki61':
+      ctx.fillStyle='#8a9aa8'; ctx.beginPath(); ctx.moveTo(0,-H*0.22); ctx.lineTo(H*0.12,0); ctx.lineTo(-H*0.12,0); ctx.closePath(); ctx.fill();
+      break;
+    case 'banzai':
+      ctx.fillStyle='#c03030'; ctx.beginPath(); ctx.arc(0,-H*0.1,H*0.3,0,Math.PI*2); ctx.fill();
+      break;
+    case 'empire':
+      ctx.strokeStyle='#6a8aaa'; ctx.lineWidth=2;
+      ctx.strokeRect(-H*0.25,-H*0.2,H*0.5,H*0.4);
+      break;
+    case 'crush':
+      ctx.fillStyle='#ff6622'; ctx.beginPath(); ctx.arc(0,0,H*0.15,0,Math.PI*2); ctx.fill();
+      break;
+    case 'death':
+      ctx.fillStyle='#5a1a1a'; ctx.beginPath(); ctx.arc(0,-H*0.05,H*0.25,0,Math.PI*2); ctx.fill();
+      break;
+    case 'airraid':
+      ctx.fillStyle='#6a7a8a'; ctx.beginPath(); ctx.moveTo(-H*0.3,-H*0.1); ctx.lineTo(H*0.3,-H*0.1); ctx.lineTo(-H*0.15,-H*0.2); ctx.closePath(); ctx.fill();
+      break;
+    case 'ambush2':
+      ctx.fillStyle='#3a2a2a'; ctx.fillRect(-H*0.3,H*0.1,H*0.6,H*0.15);
+      break;
+    default:
+      ctx.fillStyle='#4a3a28'; ctx.fillRect(-H*0.2,-H*0.2,H*0.4,H*0.4);
+  }
+  ctx.restore();
+}
+
+let audioCtx = null;
+function sfx(type){
+  try{
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = audioCtx.currentTime;
+    const o = audioCtx.createOscillator();
+    const g = audioCtx.createGain();
+    o.connect(g); g.connect(audioCtx.destination);
+    const setEnv = (gain, dur)=>{ g.gain.setValueAtTime(gain, now); g.gain.exponentialRampToValueAtTime(.001, now+dur); };
+    if(type==='play'){ o.type='sine'; o.frequency.setValueAtTime(440,now); o.frequency.exponentialRampToValueAtTime(660,now+.1); setEnv(.12,.15); o.start(now); o.stop(now+.15); }
+    else if(type==='attack'){ o.type='sawtooth'; o.frequency.setValueAtTime(180,now); o.frequency.exponentialRampToValueAtTime(60,now+.15); setEnv(.15,.18); o.start(now); o.stop(now+.18); }
+    else if(type==='hit'){ o.type='square'; o.frequency.setValueAtTime(120,now); o.frequency.exponentialRampToValueAtTime(40,now+.1); setEnv(.2,.12); o.start(now); o.stop(now+.12); }
+    else if(type==='turn'){ o.type='triangle'; o.frequency.setValueAtTime(330,now); o.frequency.exponentialRampToValueAtTime(440,now+.2); setEnv(.1,.3); o.start(now); o.stop(now+.3); }
+    else if(type==='win'){ o.type='sine'; o.frequency.setValueAtTime(523,now); o.frequency.setValueAtTime(659,now+.15); o.frequency.setValueAtTime(784,now+.3); setEnv(.15,.6); o.start(now); o.stop(now+.6); }
+    else if(type==='lose'){ o.type='sine'; o.frequency.setValueAtTime(392,now); o.frequency.setValueAtTime(330,now+.2); o.frequency.setValueAtTime(262,now+.4); setEnv(.15,.7); o.start(now); o.stop(now+.7); }
+    else if(type==='bomb'){ o.type='sawtooth'; o.frequency.setValueAtTime(80,now); o.frequency.exponentialRampToValueAtTime(30,now+.4); setEnv(.25,.5); o.start(now); o.stop(now+.5); }
+  }catch(e){}
+}
+
+const S = { playerDeck: [], battle: null, selectedCard: null, selectedUnit: null, moveMode: false, animating: false, toastTimer: null };
+const $ = id => document.getElementById(id);
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(S.toastTimer); S.toastTimer=setTimeout(()=>t.classList.remove('show'),1600); }
+function shuffle(a){ const b=[...a]; for(let i=b.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [b[i],b[j]]=[b[j],b[i]]; } return b; }
+function log(msg){ $('bt-log').textContent = '>> ' + msg; }
+
+const FX = $('fx-layer');
+function fxFlash(color){ const d=document.createElement('div'); d.className='fx-flash '+color; FX.appendChild(d); setTimeout(()=>d.remove(),600); }
+function fxShake(strong){ const f=$('bt-field'); f.classList.add(strong?'shake-strong':'shake-light'); setTimeout(()=>f.classList.remove(strong?'shake-strong':'shake-light'),450); }
+function fxBigText(text, side){ const d=document.createElement('div'); d.className='fx-bigtext '+(side||''); d.textContent=text; FX.appendChild(d); setTimeout(()=>d.remove(),1400); }
+function fxDeathParticles(x,y,color){ for(let i=0;i<12;i++){ const p=document.createElement('div'); p.className='death-particle'; p.style.left=x+'px'; p.style.top=y+'px'; p.style.background=color||'#ff8844'; p.style.boxShadow='0 0 8px '+(color||'#ff8844'); FX.appendChild(p); const a=(Math.PI*2/12)*i+Math.random()*.5; const dist=40+Math.random()*60; p.animate([{transform:'translate(0,0) scale(1)',opacity:1},{transform:`translate(${Math.cos(a)*dist}px,${Math.sin(a)*dist}px) scale(.3)`,opacity:0}],{duration:600,easing:'ease-out'}).onfinish=()=>p.remove(); } }
+function fxBombDrop(){ const d = document.createElement('div'); d.className='bomb-fall'; d.style.left = (window.innerWidth*.2 + Math.random()*window.innerWidth*.6)+'px'; d.style.top = '-20px'; FX.appendChild(d); const targetY = window.innerHeight*.5; d.animate([{transform:'translateY(0)'},{transform:`translateY(${targetY}px)`}],{duration:600,easing:'ease-in'}).onfinish=()=>{ d.remove(); sfx('bomb'); fxFlash('white'); fxShake(false); }; }
+function fxUnitDeath(el,color){ if(!el) return; const r=el.getBoundingClientRect(); fxDeathParticles(r.left+r.width/2,r.top+r.height/2,color); fxFlash('white'); }
+function fxEnd(win){ const ef=$('end-fx'); ef.className='show '+(win?'win':'lose'); ef.querySelector('.ef-title').textContent = win?'胜 利':'战 败'; sfx(win?'win':'lose'); setTimeout(()=>{ ef.className=''; showResult(win); },1700); }
+
+function showInfo(card){
+  $('ib-title').textContent = card.name;
+  const r = RARITY[card.rarity];
+  $('ib-rarity').innerHTML = `<span style="color:${r.color};font-weight:bold;">${card.rarity}</span> · 单卡最多 ${r.maxCopy} 张 · 卡组内最多 ${r.maxDeck} 张`;
+  const art = artCanvas(card.art, 400, 140).toDataURL();
+  $('ib-art').innerHTML = `<img src="${art}" style="width:100%;height:100%;object-fit:cover;">`;
+  const rows = [['费用', card.cost], ['类型', TYPE_NAMES[card.type]]];
+  if(card.type !== 'order' && card.type !== 'bomb' && card.type !== 'trap'){
+    rows.push(['攻击', card.atk]);
+    rows.push(['血量', card.hp]);
+  }
+  $('ib-rows').innerHTML = rows.map(([k,v])=>`<div class="ib-row"><span class="k">${k}</span><span class="v">${v}</span></div>`).join('');
+  let desc = '';
+  if(card.kw.length){
+    desc += card.kw.map(k=>`<div style="margin-bottom:6px;"><b style="color:#ffd24a;">${KW_NAMES[k]}</b>：${KW_DESC[k]||''}</div>`).join('');
+  }
+  if(card.desc) desc += `<div>${card.desc}</div>`;
+  $('ib-desc').innerHTML = desc || '<span style="color:#666;">无特殊效果</span>';
+  $('info-modal').classList.add('show');
+}
+$('info-close').onclick = ()=> $('info-modal').classList.remove('show');
+$('info-modal').onclick = (e)=>{ if(e.target === $('info-modal')) $('info-modal').classList.remove('show'); };
+
+$('btn-credit').onclick = ()=> $('credit-modal').classList.add('show');
+$('credit-close').onclick = ()=> $('credit-modal').classList.remove('show');
+$('credit-modal').onclick = (e)=>{ if(e.target === $('credit-modal')) $('credit-modal').classList.remove('show'); };
+
+function showScreen(name){
+  $('home').classList.toggle('hidden', name!=='home');
+  $('deck-builder').classList.toggle('hidden', name!=='deck');
+  $('battle').classList.toggle('hidden', name!=='battle');
+  $('result-screen').classList.add('hidden');
+}
+$('btn-battle').onclick = ()=>{ if(!validateDeck()) return; startBattle(); };
+$('btn-deck').onclick = ()=>{ buildDeckUI(); showScreen('deck'); };
+$('db-back').onclick = ()=> showScreen('home');
+$('db-clear').onclick = ()=>{ S.playerDeck=[]; buildDeckUI(); };
+$('db-code').onclick = ()=> $('code-modal').classList.add('show');
+$('code-close').onclick = ()=> $('code-modal').classList.remove('show');
+$('code-export').onclick = ()=>{
+  const data = { v:3, deck: S.playerDeck };
+  $('code-text').value = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  toast('已导出');
+};
+$('code-import').onclick = ()=>{
+  try{
+    const raw = $('code-text').value.trim();
+    if(!raw){ toast('请粘贴卡组码'); return; }
+    const data = JSON.parse(decodeURIComponent(escape(atob(raw))));
+    if(!data.deck || !Array.isArray(data.deck)) throw new Error('invalid');
+    S.playerDeck = data.deck.filter(id=>CHINA_CARDS.some(c=>c.id===id)).slice(0,24);
+    buildDeckUI();
+    $('code-modal').classList.remove('show');
+    toast('卡组导入成功');
+  }catch(e){ toast('卡组码无效'); }
+};
+
+function validateDeck(){
+  if(S.playerDeck.length !== 24){ toast('卡组必须恰好 24 张'); return false; }
+  const counts = { R:0, SR:0, SSR:0, UR:0 };
+  const cardCount = {};
+  S.playerDeck.forEach(id=>{
+    const c = CHINA_CARDS.find(x=>x.id===id);
+    if(!c) return;
+    counts[c.rarity]++;
+    cardCount[id] = (cardCount[id]||0)+1;
+  });
+  for(const r in counts){
+    if(counts[r] > RARITY[r].maxDeck){ toast(`${r} 最多 ${RARITY[r].maxDeck} 张`); return false; }
+  }
+  for(const id in cardCount){
+    const c = CHINA_CARDS.find(x=>x.id===id);
+    if(cardCount[id] > RARITY[c.rarity].maxCopy){ toast(`${c.name} 最多 ${RARITY[c.rarity].maxCopy} 张`); return false; }
+  }
+  return true;
+}
+
+function buildDeckUI(){
+  const pool = $('pool-grid'); pool.innerHTML='';
+  CHINA_CARDS.forEach(c=>{
+    const count = S.playerDeck.filter(id=>id===c.id).length;
+    const deckCounts = { R:0, SR:0, SSR:0, UR:0 };
+    S.playerDeck.forEach(id=>{ const cc = CHINA_CARDS.find(x=>x.id===id); if(cc) deckCounts[cc.rarity]++; });
+    const isFull = deckCounts[c.rarity] >= RARITY[c.rarity].maxDeck || count >= RARITY[c.rarity].maxCopy || S.playerDeck.length >= 24;
+    const div = document.createElement('div');
+    div.className = 'card-mini ' + c.rarity + (count>0?' owned':'') + (isFull?' full':'');
+    const artUrl = artCanvas(c.art, 160, 90).toDataURL();
+    div.innerHTML = `<div class="cm-cost">${c.cost}</div>
+      <div class="cm-art"><img src="${artUrl}" style="width:100%;height:100%;object-fit:cover;"></div>
+      <div class="cm-rarity r-${c.rarity}">${c.rarity}</div>
+      <div class="cm-name">${c.name}</div>
+      <div class="cm-stats">${TYPE_NAMES[c.type]}${c.kw.length?' · '+c.kw.map(k=>KW_NAMES[k]).join('/'):''}</div>
+      ${count>0?`<div class="cm-own">x${count}</div>`:''}`;
+    div.onclick = ()=>{ if(isFull){ toast('已达上限'); return; } S.playerDeck.push(c.id); buildDeckUI(); };
+    div.oncontextmenu = (e)=>{ e.preventDefault(); showInfo(c); };
+    pool.appendChild(div);
+  });
+  renderDeckList();
+}
+
+function renderDeckList(){
+  $('deck-count').textContent = S.playerDeck.length;
+  const counts = { R:0, SR:0, SSR:0, UR:0 };
+  S.playerDeck.forEach(id=>{ const c = CHINA_CARDS.find(x=>x.id===id); if(c) counts[c.rarity]++; });
+  $('cnt-R').textContent = counts.R + '/' + RARITY.R.maxDeck;
+  $('cnt-SR').textContent = counts.SR + '/' + RARITY.SR.maxDeck;
+  $('cnt-SSR').textContent = counts.SSR + '/' + RARITY.SSR.maxDeck;
+  $('cnt-UR').textContent = counts.UR + '/' + RARITY.UR.maxDeck;
+  const list = $('deck-list'); list.innerHTML='';
+  const counts2 = {};
+  S.playerDeck.forEach(id=>counts2[id]=(counts2[id]||0)+1);
+  Object.keys(counts2).forEach(id=>{
+    const c = CHINA_CARDS.find(x=>x.id===id);
+    const line = document.createElement('div'); line.className='deck-line';
+    line.innerHTML = `<div><span style="color:${RARITY[c.rarity].color};font-weight:bold;">[${c.rarity}]</span> ${c.name} x${counts2[id]}</div><span class="dl-remove">×</span>`;
+    line.querySelector('.dl-remove').onclick = ()=>{ const i=S.playerDeck.indexOf(id); if(i>=0) S.playerDeck.splice(i,1); buildDeckUI(); };
+    list.appendChild(line);
+  });
+}
+
+function buildAIDeck(){
+  const deck = [];
+  const counts = { R:0, SR:0, SSR:0, UR:0 };
+  const pool = shuffle([...JAPAN_CARDS]);
+  ['UR','SSR','SR','R'].forEach(r=>{
+    pool.filter(c=>c.rarity===r).forEach(c=>{
+      for(let i=0; i<RARITY[r].maxCopy; i++){
+        if(counts[r] >= RARITY[r].maxDeck || deck.length >= 24) break;
+        deck.push(c); counts[r]++;
+      }
+    });
+  });
+  while(deck.length < 24){
+    const r = JAPAN_CARDS.filter(c=>c.rarity==='R');
+    deck.push(r[Math.floor(Math.random()*r.length)]);
+  }
+  return shuffle(deck);
+}
+
+function startBattle(){
+  const playerCards = S.playerDeck.map(id=>CHINA_CARDS.find(c=>c.id===id));
+  const enemyDeck = buildAIDeck();
+  S.battle = {
+    player: { hp:20, credits:0, maxCredits:0, deck:shuffle(playerCards), hand:[], support:[null,null,null,null], traps:[], fatigue:0 },
+    enemy: { hp:20, credits:0, maxCredits:0, deck:enemyDeck, hand:[], support:[null,null,null,null], traps:[], fatigue:0 },
+    front: [null,null,null,null,null], frontOwner: null, turn:'player', round:1, over:false
+  };
+  S.selectedCard=null; S.selectedUnit=null; S.moveMode=false; S.animating=false;
+  showScreen('battle');
+  drawCards('player',3); drawCards('enemy',3);
+  startPlayerTurn();
+}
+
+function drawCards(side,n){
+  const b = S.battle[side];
+  for(let i=0;i<n;i++){
+    if(!b.deck.length){ b.fatigue++; b.hp -= b.fatigue; floatTextAtSide(side, '-'+b.fatigue, false); continue; }
+    b.hand.push(b.deck.shift());
+  }
+}
+
+function startPlayerTurn(){
+  const b = S.battle;
+  b.turn='player';
+  b.player.maxCredits = Math.min(12, b.player.maxCredits+1);
+  b.player.credits = b.player.maxCredits;
+  [...b.front, ...b.player.support].forEach(u=>{ if(u&&u.side==='player'){ u.hasActed=false; u.attacksThisTurn=0; u.suppressed=false; } });
+  drawCards('player',1);
+  $('end-turn-btn').disabled = false;
+  renderBattle();
+  fxBigText('你的回合','player'); sfx('turn');
+  log('你的回合 · 指挥点 '+b.player.credits);
+}
+function startEnemyTurn(){
+  const b = S.battle;
+  b.turn='enemy';
+  b.enemy.maxCredits = Math.min(12, b.enemy.maxCredits+1);
+  b.enemy.credits = b.enemy.maxCredits;
+  [...b.front, ...b.enemy.support].forEach(u=>{ if(u&&u.side==='enemy'){ u.hasActed=false; u.attacksThisTurn=0; u.suppressed=false; } });
+  drawCards('enemy',1);
+  $('end-turn-btn').disabled = true;
+  renderBattle();
+  fxBigText('敌方回合','enemy'); sfx('turn');
+  log('敌方回合');
+  setTimeout(enemyAI, 900);
+}
+
+function playCard(card, targetIdx){
+  const b = S.battle;
+  if(b.turn!=='player') return false;
+  const me = b.player;
+  if(me.credits < card.cost){ toast('指挥点不足'); return false; }
+
+  if(card.type==='order'){
+    me.credits -= card.cost;
+    const hi = me.hand.indexOf(card); if(hi>=0) me.hand.splice(hi,1);
+    applyOrder(card, 'player'); sfx('play'); renderBattle(); checkWin(); return true;
+  }
+  if(card.type==='bomb'){
+    me.credits -= card.cost;
+    const hi = me.hand.indexOf(card); if(hi>=0) me.hand.splice(hi,1);
+    applyBomb(card, 'player'); sfx('play'); renderBattle(); checkWin(); return true;
+  }
+  if(card.type==='trap'){
+    me.credits -= card.cost;
+    const hi = me.hand.indexOf(card); if(hi>=0) me.hand.splice(hi,1);
+    me.traps.push({ ...card });
+    log(`设置反制：${card.name}`);
+    sfx('play'); renderBattle(); return true;
+  }
+
+  const arr = me.support;
+  const idx = targetIdx!==undefined ? targetIdx : arr.findIndex(x=>!x);
+  if(idx<0 || arr[idx]){ toast('支援阵线已满'); return false; }
+  me.credits -= card.cost;
+  const hi = me.hand.indexOf(card); if(hi>=0) me.hand.splice(hi,1);
+  const isBlitz = card.kw.includes('blitz') || card.kw.includes('rush');
+  const isAmbush = card.kw.includes('ambush');
+  arr[idx] = { uid:'u'+Math.random().toString(36).slice(2,9), ...card, atk:card.atk, hp:card.hp, maxHp:card.hp, side:'player', hasActed: !isBlitz, attacksThisTurn:0, banzai:false, ambush: isAmbush, suppressed:false };
+  if(card.kw.includes('supply')){ me.credits += 1; log('补给：+1 指挥点'); }
+  if(card.cost>=5) fxFlash('gold');
+  sfx('play');
+  log(`${card.name} 部署`);
+  renderBattle(); checkWin();
+  return true;
+}
+
+function applyOrder(card, side){
+  const b = S.battle; const me = b[side]; const opp = side==='player'?'enemy':'player';
+  if(card.id==='cn_masses'){
+    me.hand.push(CHINA_CARDS.find(c=>c.id==='cn_militia'));
+    me.hand.push(CHINA_CARDS.find(c=>c.id==='cn_militia'));
+    [...me.support, ...b.front].forEach(u=>{ if(u&&u.side===side&&u.id==='cn_militia'){ u.atk++; u.hp++; u.maxHp++; } });
+  } else if(card.id==='cn_attrition'){
+    drawCards('player',2); me.hp=Math.min(20,me.hp+3); floatTextAtSide('player','+3',true);
+  } else if(card.id==='cn_pingxing'){
+    [...b[opp].support, ...b.front].filter(u=>u&&u.side===opp&&!u.ambush).forEach(t=>damageUnit(t,2));
+    fxFlash('gold');
+  } else if(card.id==='cn_hundred'){
+    [...me.support, ...b.front].forEach(u=>{ if(u&&u.side===side) u.atk+=2; });
+    drawCards(side,1);
+  } else if(card.id==='cn_protracted'){
+    me.hp=Math.min(20,me.hp+8); floatTextAtSide('player','+8',true);
+    [...me.support, ...b.front].forEach(u=>{ if(u&&u.side===side){ u.atk++; u.hp++; u.maxHp++; } });
+  } else if(card.id==='cn_arsenal'){
+    me.credits += 2; log('兵工厂增产：+2 指挥点');
+  } else if(card.id==='cn_mobilize'){
+    me.credits += 6; log('战时动员：+6 指挥点');
+  } else if(card.id==='jp_banzai'){
+    [...me.support, ...b.front].forEach(u=>{ if(u&&u.side===side&&u.type==='infantry'){ u.atk+=2; u.banzai=true; } });
+  } else if(card.id==='jp_empire'){
+    me.credits+=2;
+  } else if(card.id==='jp_crush'){
+    const t=[...b[opp].support, ...b.front].find(u=>u&&u.side===opp&&!u.ambush);
+    if(t) damageUnit(t,3);
+  } else if(card.id==='jp_death'){
+    const t=[...b[opp].support, ...b.front].find(u=>u&&u.side===opp&&!u.ambush);
+    if(t) destroyUnit(t);
+    me.hp-=3; floatTextAtSide('enemy','-3',false);
+  } else if(card.id==='jp_daihonei'){
+    [...me.support, ...b.front].forEach(u=>{ if(u&&u.side===side){ u.atk+=2; u.banzai=true; } });
+  } else if(card.id==='jp_produce'){
+    me.credits += 2; log('战时增产：+2 指挥点');
+  } else if(card.id==='jp_mobilize'){
+    me.credits += 6; log('大本营动员：+6 指挥点');
+  }
+}
+
+function applyBomb(card, side){
+  const b = S.battle; const opp = side==='player'?'enemy':'player';
+  const targets = [...b[opp].support, ...b.front].filter(u=>u&&u.side===opp&&!u.ambush);
+  fxBombDrop();
+  setTimeout(()=>{
+    targets.slice(0,2).forEach(t=>damageUnit(t, side==='player'?3:2));
+    renderBattle();
+  }, 650);
+}
+
+function damageUnit(unit, dmg){
+  unit.hp -= dmg;
+  const el = document.querySelector(`.unit-card[data-uid="${unit.uid}"]`);
+  if(el){ floatText(el, '-'+dmg, false); el.classList.add('hit'); setTimeout(()=>el.classList.remove('hit'), 300); }
+  sfx('hit');
+  if(unit.hp <= 0) destroyUnit(unit);
+}
+function floatText(el, text, plus){
+  const rect = el.getBoundingClientRect();
+  const div = document.createElement('div');
+  div.className = 'float-text ' + (plus?'plus':'minus');
+  div.textContent = text;
+  div.style.left = (rect.left + rect.width/2 - 12) + 'px';
+  div.style.top = (rect.top - 10) + 'px';
+  document.body.appendChild(div);
+  setTimeout(()=>div.remove(), 1000);
+}
+function floatTextAtSide(side, text, plus){
+  const el = side==='player' ? document.querySelector('.unit-card.player-hq') : document.querySelector('.unit-card.enemy-hq');
+  if(el) floatText(el, text, plus);
+}
+
+function renderBattle(){
+  const b = S.battle; if(!b) return;
+  $('player-credits').textContent=b.player.credits;
+  $('enemy-credits').textContent=b.enemy.credits;
+  $('enemy-hand-count').textContent=b.enemy.hand.length;
+  renderSupportLine('enemy-support', b.enemy.support, 'enemy');
+  renderSupportLine('player-support', b.player.support, 'player');
+  renderFrontLine(); renderHQ(); renderFrontOwner(); renderHand();
+}
+
+function renderFrontOwner(){
+  const badge = $('front-owner-badge');
+  const b = S.battle;
+  if(b.frontOwner==='player'){ badge.textContent='我方占领'; badge.className='player'; }
+  else if(b.frontOwner==='enemy'){ badge.textContent='敌方占领'; badge.className='enemy'; }
+  else { badge.textContent='无主'; badge.className=''; }
+}
+function updateFrontOwner(){
+  const b = S.battle;
+  const frontUnits = b.front.filter(u=>u);
+  if(frontUnits.length===0){ b.frontOwner = null; return; }
+  if(b.frontOwner){ const stillHas = frontUnits.some(u=>u.side===b.frontOwner); if(stillHas) return; }
+  b.frontOwner = frontUnits[0].side;
+}
+
+function renderSupportLine(elId, arr, side){
+  const el = $(elId); el.innerHTML='';
+  arr.forEach((u, idx)=>{
+    const slot = document.createElement('div');
+    slot.className = 'field-slot' + (u?' occupied':'');
+    slot.onclick = ()=>{
+      if(S.animating) return;
+      hideActionMenu();
+      if(S.selectedCard && S.battle.turn==='player' && side==='player' && !u){
+        playCard(S.selectedCard, idx); S.selectedCard=null; return;
+      }
+      if(S.selectedUnit && S.battle.turn==='player' && side==='enemy' && u){
+        tryAttack(S.selectedUnit.unit, u); return;
+      }
+    };
+    if(u) slot.appendChild(buildUnitEl(u));
+    el.appendChild(slot);
+  });
+}
+
+function renderFrontLine(){
+  const el = $('shared-front'); el.innerHTML='';
+  S.battle.front.forEach((u, idx)=>{
+    const slot = document.createElement('div');
+    slot.className = 'field-slot' + (u?' occupied':'');
+    if(S.selectedUnit && S.selectedUnit.moveMode && !u){
+      slot.classList.add('move-target');
+      slot.onclick = ()=>{ doMove(idx); };
+    } else {
+      slot.onclick = ()=>{
+        if(S.animating) return;
+        hideActionMenu();
+        if(S.selectedUnit && S.battle.turn==='player' && u && u.side==='enemy'){
+          tryAttack(S.selectedUnit.unit, u); return;
+        }
+      };
+    }
+    if(u) slot.appendChild(buildUnitEl(u));
+    el.appendChild(slot);
+  });
+}
+
+function renderHQ(){
+  const b = S.battle;
+  const pSlot = $('player-hq-slot'); pSlot.innerHTML='';
+  const pCard = document.createElement('div');
+  pCard.className='unit-card hq player-hq';
+  pCard.innerHTML = `<div class="uc-name">🚩 中国总部</div><div class="uc-stats"><span class="uc-hp">❤${b.player.hp}</span></div>`;
+  pSlot.appendChild(pCard);
+  const eSlot = $('enemy-hq-slot'); eSlot.innerHTML='';
+  const eCard = document.createElement('div');
+  eCard.className='unit-card hq enemy-hq';
+  eCard.innerHTML = `<div class="uc-name">🏯 日本总部</div><div class="uc-stats"><span class="uc-hp">❤${b.enemy.hp}</span></div>`;
+  eCard.onclick = ()=>{
+    if(S.animating) return;
+    if(!S.selectedUnit){ toast('先选中一个单位'); return; }
+    if(canAttackHQ(S.selectedUnit.unit)) attackHQ(S.selectedUnit.unit);
+    else toast('需要占领前线');
+  };
+  eSlot.appendChild(eCard);
+}
+
+function buildUnitEl(u){
+  const isPlayer = u.side==='player';
+  const isPlayerTurn = S.battle.turn==='player';
+  const canAct = isPlayer && isPlayerTurn && !u.hasActed && !S.animating && !u.suppressed;
+  const card = document.createElement('div');
+  let cls = 'unit-card' + (isPlayer?'':' enemy') + (canAct?' can-act':'') + (u.kw.includes('guard')?' has-guard':'');
+  if(u.ambush) cls += ' ambush';
+  if(u.suppressed) cls += ' suppressed';
+  card.className = cls;
+  card.dataset.uid = u.uid;
+  if(u.ambush){
+    card.innerHTML = `<div class="uc-type">?</div><div class="uc-name">埋伏</div><div class="uc-stats"><span class="uc-atk">?</span><span class="uc-hp">?</span></div>`;
+  } else {
+    const art = artCanvas(u.art, 92, 92);
+    card.innerHTML = `<img class="uc-art" src="${art.toDataURL()}">
+      <div class="uc-type">${TYPE_NAMES[u.type]}</div>
+      <div class="uc-name">${u.name}</div>
+      <div class="uc-stats"><span class="uc-atk">⚔${u.atk}</span><span class="uc-hp">❤${u.hp}</span></div>
+      ${u.kw.length?`<div class="uc-keyword">${u.kw.map(k=>KW_NAMES[k]).join(' ')}</div>`:''}`;
+  }
+  card.onclick = (e)=>{
+    if(S.animating || !isPlayerTurn || !isPlayer) return;
+    e.stopPropagation();
+    if(S.selectedCard){ toast('先取消出牌'); return; }
+    if(S.moveMode){ S.moveMode=false; S.selectedUnit=null; renderBattle(); return; }
+    if(u.suppressed){ toast('该单位被压制，下回合才能行动'); return; }
+    if(!canAct){ toast('该单位本回合无法行动'); return; }
+    S.selectedUnit = { unit:u, moveMode:false };
+    showActionMenu(e, u);
+  };
+  card.oncontextmenu = (e)=>{
+    e.preventDefault(); e.stopPropagation();
+    const base = (isPlayer ? CHINA_CARDS : JAPAN_CARDS).find(c=>c.id===u.id);
+    if(base) showInfo(base);
+  };
+  return card;
+}
+
+function showActionMenu(e, unit){
+  const menu = $('action-menu');
+  const b = S.battle;
+  const inSupport = b.player.support.includes(unit);
+  const canMove = inSupport && (b.frontOwner===null || b.frontOwner==='player') && b.front.some(x=>!x) && b.player.credits >= 1;
+  const hasEnemyTarget = canReachTarget(unit, 'enemy');
+  const canAttack = (hasEnemyTarget || canAttackHQ(unit)) && b.player.credits >= 1;
+  menu.innerHTML = `
+    <div class="am-item ${canMove?'':'disabled'}" data-act="move">➡️ 移动到前线（1 指挥点）</div>
+    <div class="am-item ${canAttack?'':'disabled'}" data-act="attack">⚔️ 攻击（1 指挥点）${canAttackHQ(unit)?'（可打总部）':''}</div>
+    <div class="am-item" data-act="cancel">✖️ 取消</div>`;
+  menu.style.left = (e.clientX + 10) + 'px';
+  menu.style.top = (e.clientY + 10) + 'px';
+  menu.classList.add('show');
+  menu.querySelectorAll('.am-item').forEach(item=>{
+    if(item.classList.contains('disabled')) return;
+    item.onclick = ()=>{
+      const act = item.dataset.act;
+      hideActionMenu();
+      if(act==='move'){ S.selectedUnit.moveMode = true; toast('点击前线空位移动（1 指挥点）'); renderBattle(); }
+      else if(act==='attack'){ S.selectedUnit.moveMode=false; toast('点击敌方单位攻击（1 指挥点）'); renderBattle(); }
+      else { S.selectedUnit=null; renderBattle(); }
+    };
+  });
+}
+function hideActionMenu(){ $('action-menu').classList.remove('show'); }
+document.addEventListener('click', e=>{ if(!e.target.closest('#action-menu') && !e.target.closest('.unit-card')) hideActionMenu(); });
+
+function canReachTarget(attacker, targetSide){
+  const b = S.battle;
+  return [...b[targetSide].support.filter(x=>x), ...b.front.filter(x=>x&&x.side===targetSide)].length > 0;
+}
+function canAttackHQ(unit){
+  const b = S.battle;
+  if(!b.front.includes(unit)) return false;
+  if(b.frontOwner !== 'player') return false;
+  return true;
+}
+
+function doMove(targetIdx){
+  const b = S.battle;
+  const sel = S.selectedUnit;
+  if(!sel || !sel.moveMode) return;
+  const u = sel.unit;
+  if(b.player.credits < 1){ toast('移动需要 1 指挥点'); return; }
+  if(b.frontOwner && b.frontOwner!=='player'){ toast('前线被敌方占领'); return; }
+  const fromIdx = b.player.support.indexOf(u);
+  if(fromIdx<0) return;
+  if(b.front[targetIdx]){ toast('目标位置已有单位'); return; }
+  b.player.credits -= 1;
+  b.player.support[fromIdx] = null;
+  b.front[targetIdx] = u;
+  u.hasActed = true;
+  b.frontOwner = 'player';
+  S.selectedUnit = null; S.moveMode = false;
+  log(`${u.name} 移动到前线（-1 指挥点）`);
+  if(b.enemy.traps.length > 0){
+    const trap = b.enemy.traps.shift();
+    log(`触发敌方反制：${trap.name}`);
+    damageUnit(u, 4);
+  }
+  renderBattle();
+}
+
+function tryAttack(attacker, target){
+  const b = S.battle;
+  if(b.player.credits < 1){ toast('攻击需要 1 指挥点'); return; }
+  if(target.ambush && target.side==='enemy'){
+    target.ambush = false;
+    log(`揭开了 ${target.name} 的埋伏`);
+    if(attacker.hp > 0){ damageUnit(attacker, 2); if(attacker.hp <= 0){ renderBattle(); return; } }
+  }
+  const enemies = [...b.enemy.support.filter(x=>x), ...b.front.filter(x=>x&&x.side==='enemy')];
+  const guards = enemies.filter(x=>x.kw.includes('guard') && !x.ambush);
+  if(guards.length > 0 && !guards.includes(target)){ toast('必须先攻击守护单位'); return; }
+  b.player.credits -= 1;
+  doAttack(attacker, target);
+}
+
+function doAttack(attacker, target){
+  const b = S.battle;
+  if(!attacker || !target) return;
+  const maxAttacks = attacker.kw.includes('fury') ? 2 : 1;
+  if(attacker.attacksThisTurn >= maxAttacks){ toast('攻击次数已用完'); return; }
+  S.animating = true;
+  hideActionMenu();
+  const atkEl = document.querySelector(`.unit-card[data-uid="${attacker.uid}"]`);
+  const tgtEl = document.querySelector(`.unit-card[data-uid="${target.uid}"]`);
+  if(atkEl) atkEl.classList.add('attacking');
+  drawShockLine(atkEl, tgtEl);
+  fxShake(false); fxFlash('white'); sfx('attack');
+  const dmg = attacker.atk;
+  const noReflect = target.kw.includes('impact') || attacker.kw.includes('impact') || attacker.type === 'artillery';
+  const reflect = noReflect ? 0 : target.atk;
+  const extraCounter = (!noReflect && target.kw.includes('counter')) ? target.atk : 0;
+  setTimeout(()=>{
+    if(atkEl) atkEl.classList.remove('attacking');
+    const wasAlive = target.hp > 0;
+    damageUnit(target, dmg);
+    if(wasAlive && target.hp <= 0){
+      fxUnitDeath(tgtEl, '#ff8844');
+      if(target.kw.includes('deathrattle')){
+        const opp = target.side==='player'?'enemy':'player';
+        [...b[opp].support, ...b.front].filter(u=>u&&u.side===opp&&!u.ambush).forEach(u=>damageUnit(u, 2));
+      }
+    }
+    if(reflect > 0 && attacker.hp > 0) damageUnit(attacker, reflect);
+    if(extraCounter > 0 && attacker.hp > 0) damageUnit(attacker, extraCounter);
+    if(attacker.kw.includes('suppress') && target.hp > 0) target.suppressed = true;
+    attacker.attacksThisTurn++;
+    if(attacker.attacksThisTurn >= maxAttacks) attacker.hasActed = true;
+    S.selectedUnit = null;
+    S.animating = false;
+    updateFrontOwner();
+    renderBattle();
+    log(`${attacker.name} 攻击 ${target.name}，造成 ${dmg} 伤害`);
+    checkWin();
+  }, 320);
+}
+
+function attackHQ(attacker){
+  const b = S.battle;
+  if(b.player.credits < 1){ toast('攻击需要 1 指挥点'); return; }
+  const maxAttacks = attacker.kw.includes('fury') ? 2 : 1;
+  if(attacker.attacksThisTurn >= maxAttacks){ toast('攻击次数已用完'); return; }
+  b.player.credits -= 1;
+  S.animating = true;
+  const atkEl = document.querySelector(`.unit-card[data-uid="${attacker.uid}"]`);
+  const hqEl = document.querySelector('.unit-card.enemy-hq');
+  if(atkEl) atkEl.classList.add('attacking');
+  drawShockLine(atkEl, hqEl);
+  fxFlash('red'); fxShake(true); sfx('attack');
+  setTimeout(()=>{
+    if(atkEl) atkEl.classList.remove('attacking');
+    b.enemy.hp -= attacker.atk;
+    if(hqEl) floatText(hqEl, '-'+attacker.atk, false);
+    attacker.attacksThisTurn++;
+    if(attacker.attacksThisTurn >= maxAttacks) attacker.hasActed = true;
+    S.selectedUnit = null;
+    S.animating = false;
+    renderBattle();
+    log(`攻击敌方总部，造成 ${attacker.atk} 伤害`);
+    checkWin();
+  }, 320);
+}
+
+const shockCanvas = $('battle-canvas');
+const shockCtx = shockCanvas.getContext('2d');
+function resizeCanvas(){ const f=$('bt-field'); const r=f.getBoundingClientRect(); shockCanvas.width=r.width; shockCanvas.height=r.height; }
+window.addEventListener('resize', resizeCanvas);
+function drawShockLine(atkEl, tgtEl){
+  resizeCanvas();
+  if(!atkEl || !tgtEl) return;
+  const field = $('bt-field').getBoundingClientRect();
+  const a = atkEl.getBoundingClientRect(), t = tgtEl.getBoundingClientRect();
+  const ax=a.left+a.width/2-field.left, ay=a.top+a.height/2-field.top;
+  const tx=t.left+t.width/2-field.left, ty=t.top+t.height/2-field.top;
+  let alpha=1;
+  function frame(){
+    shockCtx.clearRect(0,0,shockCanvas.width,shockCanvas.height);
+    shockCtx.strokeStyle=`rgba(255,200,80,${alpha})`; shockCtx.lineWidth=4;
+    shockCtx.beginPath(); shockCtx.moveTo(ax,ay); shockCtx.lineTo(tx,ty); shockCtx.stroke();
+    shockCtx.fillStyle=`rgba(255,240,150,${alpha})`; shockCtx.beginPath(); shockCtx.arc(tx,ty,8*alpha+4,0,Math.PI*2); shockCtx.fill();
+    alpha-=0.12;
+    if(alpha>0) requestAnimationFrame(frame); else shockCtx.clearRect(0,0,shockCanvas.width,shockCanvas.height);
+  }
+  frame();
+}
+
+function renderHand(){
+  const b = S.battle;
+  const hand = $('bt-hand'); hand.innerHTML='';
+  b.player.hand.forEach(c=>{
+    const playable = b.turn==='player' && b.player.credits >= c.cost;
+    const div = document.createElement('div');
+    div.className = 'hand-card ' + c.rarity + (playable?' playable':'') + (S.selectedCard===c?' selected':'');
+    const art = artCanvas(c.art, 110, 64);
+    div.innerHTML = `
+      <div class="hc-cost">${c.cost}</div>
+      <img class="hc-art" src="${art.toDataURL()}">
+      <div class="hc-body">
+        <div class="hc-name">${c.name}</div>
+        <div class="hc-type">${TYPE_NAMES[c.type]}</div>
+        ${c.type!=='order'&&c.type!=='bomb'&&c.type!=='trap'?`<div class="hc-stats"><span style="color:#ff8866;">⚔${c.atk}</span><span style="color:#88cc88;">❤${c.hp}</span></div>`:''}
+        <div class="hc-desc">${c.desc||''}</div>
+      </div>`;
+    div.onclick = ()=>{
+      if(b.turn!=='player' || S.animating) return;
+      if(S.selectedCard===c){ S.selectedCard=null; renderBattle(); return; }
+      if(c.type==='order'||c.type==='bomb'||c.type==='trap'){
+        if(b.player.credits<c.cost){ toast('指挥点不足'); return; }
+        playCard(c);
+      } else {
+        S.selectedCard = c; S.selectedUnit = null;
+        toast('点击支援阵线空位部署');
+        renderBattle();
+      }
+    };
+    div.oncontextmenu = (e)=>{ e.preventDefault(); showInfo(c); };
+    hand.appendChild(div);
+  });
+}
+
+function destroyUnit(unit){
+  const b = S.battle;
+  const sIdx = b[unit.side].support.indexOf(unit);
+  if(sIdx>=0) b[unit.side].support[sIdx] = null;
+  const fIdx = b.front.indexOf(unit);
+  if(fIdx>=0) b.front[fIdx] = null;
+  updateFrontOwner();
+}
+
+$('end-turn-btn').onclick = ()=>{
+  if(!S.battle || S.battle.turn!=='player' || S.animating) return;
+  S.selectedCard=null; S.selectedUnit=null; S.moveMode=false;
+  hideActionMenu();
+  [...S.battle.front, ...S.battle.player.support].forEach(u=>{ if(u&&u.side==='player'){ u.hasActed=false; u.attacksThisTurn=0; } });
+  startEnemyTurn();
+};
+
+function enemyAI(){
+  const b = S.battle;
+  if(!b || b.over) return;
+  const playerUnits = [...b.player.support.filter(x=>x), ...b.front.filter(x=>x&&x.side==='player')];
+  const playerTotalAtk = playerUnits.reduce((s,u)=>s+u.atk,0);
+
+  /* 出牌 */
+  let played = true, guard = 0;
+  while(played && guard < 30){
+    guard++;
+    played = false;
+    const playable = b.enemy.hand.filter(c=>c.cost <= b.enemy.credits);
+    if(!playable.length) break;
+    const scored = playable.map(c=>{
+      let score = c.cost * 10;
+      if(c.type==='order'){
+        if(c.id==='jp_crush' && playerUnits.length){ const best=playerUnits.reduce((a,u)=>u.atk>a.atk?u:a,playerUnits[0]); score+=best.atk*15; if(best.hp<=3) score+=50; }
+        if(c.id==='jp_death' && playerUnits.length){ const best=playerUnits.reduce((a,u)=>u.hp>a.hp?u:a,playerUnits[0]); score+=best.hp*10; }
+        if(c.id==='jp_banzai'){ const inf=[...b.enemy.support,...b.front].filter(u=>u&&u.side==='enemy'&&u.type==='infantry'); score+=inf.length*30; }
+        if(c.id==='jp_empire') score+=40;
+        if(c.id==='jp_daihonei'){ const own=[...b.enemy.support,...b.front].filter(u=>u&&u.side==='enemy'); score+=own.length*40; }
+        if(c.id==='jp_produce') score+=20;
+        if(c.id==='jp_mobilize') score+=30;
+        if(b.enemy.hp<=8 && c.id==='jp_death') score-=100;
+      } else if(c.type==='bomb'){
+        score += playerUnits.length * 25;
+        if(!playerUnits.length) score = -100;
+      } else if(c.type==='trap'){
+        score += 25;
+      } else {
+        const supportSlots = b.enemy.support.filter(x=>!x).length;
+        if(!supportSlots) score = -100;
+        else {
+          score += c.atk * 8 + c.hp * 5;
+          if(c.kw.includes('blitz')) score += 30;
+          if(c.kw.includes('guard') && playerTotalAtk > 8) score += 40;
+          if(c.kw.includes('fury')) score += 25;
+          if(c.kw.includes('suppress')) score += 15;
+        }
+      }
+      return { c, score };
+    });
+    scored.sort((a,b)=>b.score-a.score);
+    const top = scored[0];
+    if(!top || top.score < 0) break;
+    const c = top.c;
+    if(c.type==='order'){
+      b.enemy.credits -= c.cost; b.enemy.hand.splice(b.enemy.hand.indexOf(c),1); applyOrder(c,'enemy'); played=true;
+    } else if(c.type==='bomb'){
+      b.enemy.credits -= c.cost; b.enemy.hand.splice(b.enemy.hand.indexOf(c),1); applyBomb(c,'enemy'); played=true;
+    } else if(c.type==='trap'){
+      b.enemy.credits -= c.cost; b.enemy.hand.splice(b.enemy.hand.indexOf(c),1); b.enemy.traps.push({...c}); played=true;
+    } else {
+      const idx = b.enemy.support.findIndex(x=>!x);
+      if(idx < 0) break;
+      b.enemy.credits -= c.cost; b.enemy.hand.splice(b.enemy.hand.indexOf(c),1);
+      const isAmbush = c.kw.includes('ambush');
+      b.enemy.support[idx] = { uid:'u'+Math.random().toString(36).slice(2,9), ...c, atk:c.atk, hp:c.hp, maxHp:c.hp, side:'enemy', hasActed:true, attacksThisTurn:0, banzai:false, ambush:isAmbush, suppressed:false };
+      if(c.kw.includes('supply')) b.enemy.credits += 1;
+      played=true;
+    }
+  }
+  renderBattle();
+
+  setTimeout(()=>{
+    const actions = [];
+    const canMoveToFront = (b.frontOwner === null || b.frontOwner === 'enemy') && b.enemy.credits >= 1;
+    if(canMoveToFront){
+      b.enemy.support.forEach((u,i)=>{
+        if(u){ const frontIdx = b.front.findIndex(x=>!x); if(frontIdx>=0) actions.push({type:'move', unit:u, fromIdx:i, toIdx:frontIdx}); }
+      });
+    }
+    [...b.front, ...b.enemy.support].forEach(u=>{ if(u&&u.side==='enemy') actions.push({type:'attack', unit:u}); });
+
+    let ai = 0;
+    function step(){
+      if(ai >= actions.length){ finishEnemyTurn(); return; }
+      const act = actions[ai++];
+      if(act.type==='move'){
+        if(b.enemy.credits < 1){ setTimeout(step, 50); return; }
+        b.enemy.credits -= 1;
+        b.enemy.support[act.fromIdx] = null;
+        b.front[act.toIdx] = act.unit;
+        b.frontOwner = 'enemy';
+        act.unit.hasActed = true;
+        /* 玩家反制 */
+        if(b.player.traps.length > 0){
+          const trap = b.player.traps.shift();
+          log(`玩家反制触发：${trap.name}`);
+          damageUnit(act.unit, 4);
+        }
+        renderBattle();
+        setTimeout(step, 450);
+      } else {
+        const u = act.unit;
+        if(u.hasActed || u.suppressed){ setTimeout(step, 100); return; }
+        if(b.enemy.credits < 1){ setTimeout(step, 50); return; }
+        const enemies = [...b.player.support.filter(x=>x), ...b.front.filter(x=>x&&x.side==='player')];
+        const guards = enemies.filter(x=>x.kw.includes('guard') && !x.ambush);
+        const targets = guards.length > 0 ? guards : enemies;
+        let chosen = null;
+        if(targets.length){
+          chosen = targets.reduce((best,t)=>{
+            if(t.hp <= u.atk){ if(!best) return t; if(t.atk > best.atk) return t; }
+            return best || t;
+          }, null);
+        }
+        if(chosen){
+          b.enemy.credits -= 1;
+          const t = chosen;
+          const tEl = document.querySelector(`.unit-card[data-uid="${t.uid}"]`);
+          const uEl = document.querySelector(`.unit-card[data-uid="${u.uid}"]`);
+          if(uEl) uEl.classList.add('attacking');
+          drawShockLine(uEl, tEl); fxShake(false); sfx('attack');
+          setTimeout(()=>{
+            if(uEl) uEl.classList.remove('attacking');
+            if(t.ambush){ t.ambush=false; damageUnit(u, 2); if(u.hp<=0){ renderBattle(); setTimeout(step,200); return; } }
+            const alive = t.hp > 0;
+            damageUnit(t, u.atk);
+            if(alive && t.hp <= 0){
+              fxUnitDeath(tEl, '#ff4444');
+              if(t.kw.includes('deathrattle')){ [...b.enemy.support, ...b.front].filter(e=>e&&e.side==='enemy'&&!e.ambush).forEach(e=>damageUnit(e, 2)); }
+            }
+            const noReflect = t.kw.includes('impact') || u.kw.includes('impact') || u.type === 'artillery';
+            if(!noReflect && t.hp > 0) damageUnit(u, t.atk);
+            if(!noReflect && t.kw.includes('counter') && u.hp > 0) damageUnit(u, t.atk);
+            if(u.kw.includes('suppress') && t.hp > 0) t.suppressed = true;
+            renderBattle();
+            setTimeout(step, 350);
+          }, 320);
+        } else if(canAttackHQAI(u)){
+          b.enemy.credits -= 1;
+          b.player.hp -= u.atk;
+          const hqEl = document.querySelector('.unit-card.player-hq');
+          if(hqEl) floatText(hqEl, '-'+u.atk, false);
+          fxFlash('red'); fxShake(true); sfx('attack');
+          u.hasActed = true;
+          renderBattle();
+          setTimeout(step, 350);
+        } else {
+          u.hasActed = true;
+          setTimeout(step, 150);
+        }
+      }
+    }
+    step();
+  }, 500);
+}
+
+function canAttackHQAI(u){
+  const b = S.battle;
+  return b.front.includes(u) && b.frontOwner === 'enemy';
+}
+
+function finishEnemyTurn(){
+  const b = S.battle;
+  if(b.over) return;
+  [...b.front, ...b.enemy.support].forEach(u=>{ if(u && u.side==='enemy' && u.banzai){ destroyUnit(u); } });
+  updateFrontOwner();
+  renderBattle();
+  checkWin();
+  if(!b.over){ b.round++; startPlayerTurn(); }
+}
+
+function checkWin(){
+  const b = S.battle; if(!b || b.over) return;
+  if(b.player.hp<=0){ b.over=true; fxEnd(false); }
+  else if(b.enemy.hp<=0){ b.over=true; fxEnd(true); }
+}
+function showResult(win){
+  $('result-title').textContent = win?'胜利':'战败';
+  $('result-title').style.color = win?'#4ade80':'#ff4444';
+  $('result-sub').textContent = win?'总部安然无恙。':'总部失守。';
+  $('result-screen').classList.remove('hidden');
+}
+$('result-back').onclick = ()=> showScreen('home');
+
+showScreen('home');
+resizeCanvas();
+</script>
+</body>
+</html>
